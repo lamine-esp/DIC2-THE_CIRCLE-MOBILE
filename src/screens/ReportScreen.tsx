@@ -141,6 +141,20 @@ const ReportScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      productId: null,
+      regionId: null,
+      observedPrice: '',
+      comment: '',
+      photo: null,
+    });
+    setSelectedProduct(null);
+    setSelectedRegion(null);
+    setShowProductPicker(false);
+    setShowRegionPicker(false);
+  };
+
   const validateForm = (): boolean => {
     if (!selectedProduct) {
       Alert.alert(t('common.error'), t('report.selectProductError'));
@@ -188,13 +202,20 @@ const ReportScreen: React.FC<Props> = ({ navigation, route }) => {
 
       await reportService.submitPriceReport(reportData);
 
+      // Réinitialiser le formulaire après succès
+      resetForm();
+
       Alert.alert(
         t('report.success'),
         t('report.successMessage'),
         [
           {
             text: t('common.confirm'),
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              // Option : rester sur l'écran pour faire d'autres signalements
+              // ou revenir à l'écran précédent
+              console.log('Signalement envoyé avec succès, formulaire réinitialisé');
+            },
           }
         ]
       );
@@ -342,16 +363,31 @@ const ReportScreen: React.FC<Props> = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Bouton de soumission */}
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={submitReport}
-              disabled={loading}
-            >
-              <Text style={styles.submitButtonText}>
-                {loading ? t('common.loading') : t('report.submit')}
-              </Text>
-            </TouchableOpacity>
+            {/* Boutons d'action */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={resetForm}
+                disabled={loading}
+              >
+                <Text style={styles.resetButtonText}>
+                  {t('common.reset')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Boutons d'action */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={submitReport}
+                disabled={loading}
+              >
+                <Text style={styles.submitButtonText}>
+                  {loading ? t('common.loading') : t('report.submit')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -389,6 +425,7 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 16,
+    paddingBottom: 100, // Espace pour le bottom tab navigator
   },
   pickerContainer: {
     marginBottom: 20,
@@ -500,12 +537,32 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 6,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  resetButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  resetButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   submitButton: {
+    flex: 1,
     backgroundColor: '#DC2626',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
   },
   submitButtonDisabled: {
     backgroundColor: '#9CA3AF',

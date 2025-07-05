@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  RefreshControl,
 } from 'react-native';
 
 import { Utilisateur, Signalement } from '../types/api';
@@ -39,18 +40,28 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     rejectedReports: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadUserData();
   }, []);
 
-  const loadUserData = async () => {
+  const loadUserData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isRefresh) setLoading(true);
+      else setRefreshing(true);
       
+      // Vérifier d'abord l'authentification
+      const isAuth = await authService.isAuthenticated();
+      if (!isAuth) {
+        navigation.getParent()?.navigate('Auth');
+        return;
+      }
+
+      // Récupérer les données utilisateur depuis l'API
       const currentUser = await authService.getCurrentUser();
       if (!currentUser) {
-        navigation.navigate('Auth');
+        navigation.getParent()?.navigate('Auth');
         return;
       }
 
@@ -74,7 +85,12 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert(t('common.error'), t('profile.loadError'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadUserData(true);
   };
 
   const handleLogout = () => {
@@ -88,15 +104,75 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              setLoading(true);
               await authService.logout();
-              navigation.navigate('Auth');
+              Alert.alert('Succès', 'Vous avez été déconnecté avec succès');
+              navigation.getParent()?.navigate('Auth');
             } catch (error) {
               console.error('Erreur lors de la déconnexion:', error);
               Alert.alert(t('common.error'), t('profile.logoutError'));
+            } finally {
+              setLoading(false);
             }
           },
         },
       ]
+    );
+  };
+
+  const handleEditProfile = () => {
+    if (!user) return;
+
+    Alert.prompt(
+      'Modifier le profil',
+      'Nom complet',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Suivant',
+          onPress: (nom) => {
+            if (!nom) return;
+            
+            Alert.prompt(
+              'Modifier le profil',
+              'Téléphone',
+              [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                  text: 'Sauvegarder',
+                  onPress: async (telephone) => {
+                    if (!telephone) return;
+                    
+                    try {
+                      setLoading(true);
+                      const [firstName, ...lastNameParts] = nom.trim().split(' ');
+                      const lastName = lastNameParts.join(' ') || firstName;
+                      
+                      const updatedUser = await authService.updateProfile({
+                        nom: lastName,
+                        prenom: firstName,
+                        telephone: telephone
+                      });
+                      
+                      setUser(updatedUser);
+                      Alert.alert('Succès', 'Profil mis à jour avec succès !');
+                    } catch (error) {
+                      console.error('Erreur lors de la mise à jour:', error);
+                      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }
+                }
+              ],
+              'plain-text',
+              user.telephone
+            );
+          }
+        }
+      ],
+      'plain-text',
+      `${user.prenom} ${user.nom}`
     );
   };
 
@@ -217,7 +293,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderActions = () => (
     <View style={styles.section}>
-      <TouchableOpacity style={styles.actionButton} onPress={() => {}}>
+      <TouchableOpacity style={styles.actionButton} onPress={handleEditProfile}>
         <Text style={styles.actionButtonText}>{t('profile.editProfile')}</Text>
       </TouchableOpacity>
 
@@ -250,7 +326,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{t('profile.notLoggedIn')}</Text>
-          <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Auth')}>
+          <TouchableOpacity style={styles.loginButton} onPress={() => navigation.getParent()?.navigate('Auth')}>
             <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
           </TouchableOpacity>
         </View>
@@ -262,7 +338,19 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#3B82F6']}
+            title="Actualiser le profil"
+          />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.title}>{t('profile.title')}</Text>
           <Text style={styles.subtitle}>
@@ -286,6 +374,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 100, // Espace pour éviter que le contenu soit caché par la barre de navigation
   },
   loadingContainer: {
     flex: 1,

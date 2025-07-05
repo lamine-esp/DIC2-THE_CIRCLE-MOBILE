@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingBottom: 100, // Espace pour le bottom tab navigator
   },
   emptyState: {
     flex: 1,

@@ -36,6 +36,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       return;
     }
 
+    if (!isLogin && (!name || !phone)) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs requis');
+      return;
+    }
+
     if (!isLogin && password !== confirmPassword) {
       Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
@@ -46,24 +51,40 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       if (isLogin) {
         const response = await authService.login({ email, password });
         if (response.token) {
+          Alert.alert('Succès', `Bienvenue ${response.user.prenom} !`);
           onAuthSuccess();
         }
       } else {
         const response = await authService.register({
           nom: name.split(' ')[0] || name,
-          prenom: name.split(' ')[1] || '',
+          prenom: name.split(' ')[1] || name.split(' ')[0],
           email,
           motDePasse: password,
           telephone: phone,
-          regionId: 1, // Default region ID
+          regionId: 1, // Default region ID - Dakar
         });
         if (response.token) {
+          Alert.alert('Succès', `Compte créé avec succès ! Bienvenue ${response.user.prenom} !`);
           onAuthSuccess();
         }
       }
-    } catch (error) {
-      Alert.alert('Erreur', 'Erreur lors de l\'authentification');
+    } catch (error: any) {
       console.error('Auth error:', error);
+      
+      // Gestion d'erreurs plus spécifique
+      let errorMessage = 'Erreur lors de l\'authentification';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Email ou mot de passe incorrect';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'Cette adresse email est déjà utilisée';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'Erreur de connexion. Vérifiez votre connexion internet.';
+      }
+      
+      Alert.alert('Erreur', errorMessage);
     } finally {
       setLoading(false);
     }

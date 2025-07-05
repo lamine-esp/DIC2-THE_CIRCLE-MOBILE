@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingBottom: 100, // Espace pour le bottom tab navigator
   },
   loadingContainer: {
     flex: 1,

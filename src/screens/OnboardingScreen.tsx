@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitch from '../components/LanguageSwitch';
+import authService from '../services/authService';
 
 interface Props {
   navigation: any;
@@ -30,6 +31,24 @@ const { width, height } = Dimensions.get('window');
 const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Vérifier si l'utilisateur est authentifié au chargement
+  useEffect(() => {
+    checkAuthenticationStatus();
+  }, []);
+
+  const checkAuthenticationStatus = async () => {
+    try {
+      const currentUser = await authService.getCurrentUser();
+      if (currentUser) {
+        // Si l'utilisateur est authentifié, rediriger vers l'écran principal
+        navigation.replace('MainTabs');
+        return;
+      }
+    } catch (error) {
+      console.log('User not authenticated, showing onboarding');
+    }
+  };
 
   const steps: OnboardingStep[] = [
     {
@@ -75,20 +94,20 @@ const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const finishOnboarding = async () => {
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
-      navigation.replace('MainTabs');
+      navigation.replace('Auth');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      navigation.replace('MainTabs');
+      navigation.replace('Auth');
     }
   };
 
   const skipOnboarding = async () => {
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
-      navigation.replace('MainTabs');
+      navigation.replace('Auth');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      navigation.replace('MainTabs');
+      navigation.replace('Auth');
     }
   };
 

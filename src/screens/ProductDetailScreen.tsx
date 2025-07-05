@@ -108,13 +108,11 @@ const ProductDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleReport = () => {
-    // Navigate to report screen with this product
-    // For now, we'll use Alert as placeholder
-    Alert.alert(
-      'Signaler un prix',
-      'Cette fonctionnalité sera disponible prochainement',
-      [{ text: 'OK' }]
-    );
+    // Naviguer vers l'écran de signalement avec ce produit
+    navigation.getParent()?.navigate('MainTabs', { 
+      screen: 'Report',
+      params: { productId: productId }
+    });
   };
 
   if (loading) {
@@ -182,15 +180,19 @@ const ProductDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Graphique des prix */}
-        {product.priceHistory && product.priceHistory.length > 1 ? (
+        {/* Graphique d'évolution des prix */}
+        {product.priceHistory && product.priceHistory.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('product.priceHistory')}</Text>
+            <Text style={styles.sectionTitle}>{t('product.priceEvolution')}</Text>
             <View style={styles.chartContainer}>
-              <Text style={styles.noChartText}>{t('product.noHistory')}</Text>
+              <PriceChart
+                data={product.priceHistory.slice().reverse().map(price => price.valeur)}
+                width={width - 40}
+                height={200}
+              />
             </View>
           </View>
-        ) : null}
+        )}
 
         {/* Historique des prix sous forme de liste */}
         {product.priceHistory && product.priceHistory.length > 0 && (
@@ -260,6 +262,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -351,11 +354,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   chartContainer: {
-    height: 200,
+    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
+    padding: 10,
   },
   noChartText: {
     color: '#666',

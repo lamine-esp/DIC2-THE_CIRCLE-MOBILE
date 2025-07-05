@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration de base de l'API
-const API_BASE_URL = 'http://192.168.1.9:8080';
+const API_BASE_URL = 'http://192.168.1.10:8080';
 
 class ApiService {
   private api: AxiosInstance;
@@ -35,9 +35,27 @@ class ApiService {
       (response) => response,
       async (error) => {
         if (error.response?.status === 401) {
-          // Token expiré, supprimer le token et rediriger vers la connexion
-          await AsyncStorage.removeItem('auth_token');
-          await AsyncStorage.removeItem('user_data');
+          // Token expiré, essayer de rafraîchir le token
+          const originalRequest = error.config;
+          
+          if (!originalRequest._retry) {
+            originalRequest._retry = true;
+            
+            try {
+              // Importer dynamiquement pour éviter les dépendances circulaires
+              const { authService } = await import('./authService');
+              const newToken = await authService.refreshToken();
+              
+              // Mettre à jour le header et réessayer la requête
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return this.api(originalRequest);
+            } catch (refreshError) {
+              // Si le refresh échoue, déconnecter l'utilisateur
+              await AsyncStorage.removeItem('auth_token');
+              await AsyncStorage.removeItem('user_data');
+              console.error('Échec du rafraîchissement du token:', refreshError);
+            }
+          }
         }
         return Promise.reject(error);
       }
@@ -46,23 +64,51 @@ class ApiService {
 
   // Méthodes génériques
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.get<T>(url, config);
-    return response.data;
+    try {
+      console.log(`[API] GET request to: ${API_BASE_URL}${url}`);
+      const response = await this.api.get<T>(url, config);
+      console.log(`[API] GET response from ${url}:`, response.status);
+      return response.data;
+    } catch (error) {
+      console.error(`[API] GET error for ${url}:`, error);
+      throw error;
+    }
   }
 
   async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.post<T>(url, data, config);
-    return response.data;
+    try {
+      console.log(`[API] POST request to: ${API_BASE_URL}${url}`);
+      const response = await this.api.post<T>(url, data, config);
+      console.log(`[API] POST response from ${url}:`, response.status);
+      return response.data;
+    } catch (error) {
+      console.error(`[API] POST error for ${url}:`, error);
+      throw error;
+    }
   }
 
   async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.put<T>(url, data, config);
-    return response.data;
+    try {
+      console.log(`[API] PUT request to: ${API_BASE_URL}${url}`);
+      const response = await this.api.put<T>(url, data, config);
+      console.log(`[API] PUT response from ${url}:`, response.status);
+      return response.data;
+    } catch (error) {
+      console.error(`[API] PUT error for ${url}:`, error);
+      throw error;
+    }
   }
 
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.delete<T>(url, config);
-    return response.data;
+    try {
+      console.log(`[API] DELETE request to: ${API_BASE_URL}${url}`);
+      const response = await this.api.delete<T>(url, config);
+      console.log(`[API] DELETE response from ${url}:`, response.status);
+      return response.data;
+    } catch (error) {
+      console.error(`[API] DELETE error for ${url}:`, error);
+      throw error;
+    }
   }
 
   // Méthodes utilitaires
