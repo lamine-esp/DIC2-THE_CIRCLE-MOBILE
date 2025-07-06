@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration de base de l'API
-const API_BASE_URL = 'http://192.168.1.10:8080';
+const API_BASE_URL = 'https://dic2-the-circle-backend.onrender.com';
 
 class ApiService {
   private api: AxiosInstance;
